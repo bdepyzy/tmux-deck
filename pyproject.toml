@@ -3,7 +3,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "tmux-board"
+name = "tmux-deck"
 version = "0.1.0"
 description = "A sleek interactive grid of your tmux sessions — project status at a glance, jump in with a keystroke."
 readme = "README.md"
@@ -22,11 +22,11 @@ classifiers = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/bdepyzy/tmux-board"
-Issues = "https://github.com/bdepyzy/tmux-board/issues"
+Homepage = "https://github.com/bdepyzy/tmux-deck"
+Issues = "https://github.com/bdepyzy/tmux-deck/issues"
 
 [project.scripts]
-tmux-board = "tmux_board.app:main"
+tmux-deck = "tmux_deck.app:main"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/tmux_board"]
+packages = ["src/tmux_deck"]

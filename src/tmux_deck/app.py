@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""tmux-board — a sleek interactive grid of your tmux sessions.
+"""tmux-deck — a sleek interactive grid of your tmux sessions.
 
 Each session is a card showing what the project is up to: git branch,
 dirty/unpushed state, last commit, and what's running right now.
@@ -261,9 +261,9 @@ def draw_card(scr, s, idx, y, x, w, selected, scr_h):
 
 def draw_chrome(scr, n, w, h):
     try:
-        scr.addnstr(0, 2, "tmux board", min(w - 3, 10), curses.A_BOLD | A["text"])
+        scr.addnstr(0, 2, "tmux deck", min(w - 3, 10), curses.A_BOLD | A["text"])
         count = f"· {n} session{'s' if n != 1 else ''}"
-        scr.addnstr(0, 13, count, max(0, w - 14), A["grey"])
+        scr.addnstr(0, 12, count, max(0, w - 14), A["grey"])
     except curses.error:
         pass
     hints = "←↑↓→ move   ↵ attach   1-9 jump   x kill   r refresh   q quit"
@@ -379,11 +379,11 @@ def run(scr):
 
 def main():
     if len(sys.argv) > 1 and sys.argv[1] in ("--version", "-V"):
-        print(f"tmux-board {__version__}")
+        print(f"tmux-deck {__version__}")
         return
     if len(sys.argv) > 1 and sys.argv[1] in ("--help", "-h"):
         print(__doc__.strip())
-        print("\nusage: tmux-board [--version]")
+        print("\nusage: tmux-deck [--version]")
         return
     if not out(["tmux", "list-sessions", "-F", "#{session_name}"]).strip():
         print("No tmux sessions are running.", file=sys.stderr)
