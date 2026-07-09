@@ -1,7 +1,6 @@
 # tmux-deck
-
-A sleek interactive deck of your tmux sessions. Each session is a card that
-tells you what the project is actually up to — no LLMs, just your environment:
+Completely vibecoded interactive deck for tmux sessions. Each session is a card that
+tells you what the project is actually up to:
 
 ```
  tmux deck · 4 sessions
