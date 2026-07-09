@@ -1,0 +1,32 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "tmux-board"
+version = "0.1.0"
+description = "A sleek interactive grid of your tmux sessions — project status at a glance, jump in with a keystroke."
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.9"
+authors = [{ name = "bdepyzy", email = "obo.dan87@gmail.com" }]
+keywords = ["tmux", "tui", "curses", "sessions", "terminal", "dashboard"]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Environment :: Console :: Curses",
+  "Intended Audience :: Developers",
+  "Operating System :: POSIX",
+  "Programming Language :: Python :: 3",
+  "Topic :: Terminals",
+  "Topic :: Utilities",
+]
+
+[project.urls]
+Homepage = "https://github.com/bdepyzy/tmux-board"
+Issues = "https://github.com/bdepyzy/tmux-board/issues"
+
+[project.scripts]
+tmux-board = "tmux_board.app:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/tmux_board"]
