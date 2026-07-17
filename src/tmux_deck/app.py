@@ -3,10 +3,10 @@
 
 Each session is a card showing what the project is up to: git branch,
 dirty/unpushed state, last commit, and what's running right now.
-Navigate with arrows or mouse, Enter to attach, 1-9 to jump.
+Navigate with arrows or mouse, Enter to attach, 1-9 to jump, / to search.
 """
 
-__version__ = "0.1.0"
+__version__ = "0.2.0"
 
 import math
 import os
@@ -259,18 +259,45 @@ def draw_card(scr, s, idx, y, x, w, selected, scr_h):
     puti(4, running, A["grey"])
 
 
-def draw_chrome(scr, n, w, h):
+def draw_chrome(scr, n, w, h, searching=False, query=""):
     try:
         scr.addnstr(0, 2, "tmux deck", min(w - 3, 10), curses.A_BOLD | A["text"])
-        count = f"· {n} session{'s' if n != 1 else ''}"
+        count = f"· {n} match{'es' if n != 1 else ''}" if searching else f"· {n} session{'s' if n != 1 else ''}"
         scr.addnstr(0, 12, count, max(0, w - 14), A["grey"])
     except curses.error:
         pass
-    hints = "←↑↓→ move   ↵ attach   1-9 jump   x kill   r refresh   q quit"
+    hints = "←↑↓→ move   ↵ attach   / search   1-9 jump   x kill   r refresh   q quit"
     try:
         scr.addnstr(h - 1, max(0, (w - len(hints)) // 2), hints, w - 1, A["dim"])
     except curses.error:
         pass
+
+
+def draw_search_popup(scr, w, h, query):
+    """Centered modal search box; returns (row, col) to park the cursor at."""
+    inner = max(24, len(query) + 2)
+    inner = min(inner, w - 6)
+    box_w = inner + 2
+    bx = max(0, (w - box_w) // 2)
+    by = max(0, h // 2 - 2)
+    border = A["accent"] | curses.A_BOLD
+
+    def put(yy, xx, text, attr=0):
+        if 0 <= yy < h and 0 <= xx < w:
+            try:
+                scr.addnstr(yy, xx, text, w - xx, attr)
+            except curses.error:
+                pass
+
+    label = "─ search "
+    put(by, bx, "╭" + label + "─" * max(0, box_w - 2 - len(label)) + "╮", border)
+    put(by + 1, bx, "│", border)
+    put(by + 1, bx + box_w - 1, "│", border)
+    put(by + 1, bx + 1, ell("/" + query, inner).ljust(inner), A["text"])
+    put(by + 2, bx, "╰" + "─" * (box_w - 2) + "╯", border)
+    hint = "↵ attach · esc cancel"
+    put(by + 3, bx + max(0, (box_w - len(hint)) // 2), hint, A["dim"])
+    return by + 1, min(bx + 1 + len("/" + query), bx + inner)
 
 
 def confirm(scr, msg):
@@ -294,24 +321,32 @@ def run(scr):
 
     sessions = get_sessions()
     sel, off = 0, 0
+    query = ""          # active name filter (set via / search)
+    searching = False   # True while typing into the search prompt
     stride_y = CARD_H + ROW_GAP
 
     while True:
         if not sessions:
             return None
-        sel = max(0, min(sel, len(sessions) - 1))
+
+        # filter the visible cards by a case-insensitive substring on the name
+        view = [s for s in sessions if query.lower() in s["name"].lower()] if query else sessions
+        n = len(view)
+        sel = max(0, min(sel, n - 1)) if n else 0
 
         h, w = scr.getmaxyx()
-        n = len(sessions)
-        ncols = max(1, min((w - 2 + COL_GAP) // (MIN_CARD_W + COL_GAP), n))
-        card_w = min(MAX_CARD_W, (w - 2 - (ncols - 1) * COL_GAP) // ncols)
+        if n:
+            ncols = max(1, min((w - 2 + COL_GAP) // (MIN_CARD_W + COL_GAP), n))
+            card_w = min(MAX_CARD_W, (w - 2 - (ncols - 1) * COL_GAP) // ncols)
+        else:
+            ncols, card_w = 1, min(MAX_CARD_W, w - 2)
         grid_w = ncols * card_w + (ncols - 1) * COL_GAP
         x0 = max(1, (w - grid_w) // 2)
         y0 = 2
-        nrows = math.ceil(n / ncols)
+        nrows = math.ceil(n / ncols) if n else 0
         view_h = h - 1 - y0
 
-        sel_top = (sel // ncols) * stride_y
+        sel_top = (sel // ncols) * stride_y if n else 0
         if sel_top < off:
             off = sel_top
         if sel_top + CARD_H > off + view_h:
@@ -319,41 +354,80 @@ def run(scr):
         off = max(0, min(off, max(0, nrows * stride_y - ROW_GAP - view_h)))
 
         scr.erase()
-        draw_chrome(scr, n, w, h)
+        draw_chrome(scr, n, w, h, searching, query)
 
         boxes = []
-        for i, s in enumerate(sessions):
+        for i, s in enumerate(view):
             r, c = divmod(i, ncols)
             y = y0 + r * stride_y - off
             x = x0 + c * (card_w + COL_GAP)
             boxes.append((y, x, CARD_H, card_w))
             if y + CARD_H > y0 - 1 and y < h - 1:
                 draw_card(scr, s, i, y, x, card_w, i == sel, h - 1)
+        if not n:
+            try:
+                scr.addnstr(y0 + 1, x0, "no sessions match", w - 2, A["dim"])
+            except curses.error:
+                pass
+        if searching:  # centered modal search box, drawn last so it overlays
+            cy, cx = draw_search_popup(scr, w, h, query)
+            try:
+                scr.move(cy, min(cx, w - 1))
+            except curses.error:
+                pass
         scr.refresh()
 
         ch = scr.getch()
+
+        # ── search mode: keystrokes edit the query instead of the grid ──
+        if searching:
+            if ch == 27:  # Esc — cancel the filter
+                searching, query, sel = False, "", 0
+                curses.curs_set(0)
+            elif ch in (curses.KEY_ENTER, 10, 13):
+                if n:
+                    return view[sel]["name"]
+            elif ch in (curses.KEY_BACKSPACE, 127, 8):
+                query, sel = query[:-1], 0
+            elif ch == curses.KEY_LEFT:
+                sel = max(0, sel - 1)
+            elif ch == curses.KEY_RIGHT:
+                sel = min(n - 1, sel + 1) if n else 0
+            elif ch == curses.KEY_UP and n and sel - ncols >= 0:
+                sel -= ncols
+            elif ch == curses.KEY_DOWN and n and sel + ncols < n:
+                sel += ncols
+            elif 32 <= ch < 127:  # printable — including digits, which are valid in names
+                query, sel = query + chr(ch), 0
+            continue
+
+        # ── normal mode ──
         if ch in (ord("q"), 27):
             return None
+        elif ch == ord("/"):
+            searching, query, sel = True, "", 0
+            curses.curs_set(1)
         elif ch in (curses.KEY_ENTER, 10, 13):
-            return sessions[sel]["name"]
+            if n:
+                return view[sel]["name"]
         elif ord("1") <= ch <= ord("9"):
             i = ch - ord("1")
             if i < n:
-                return sessions[i]["name"]
+                return view[i]["name"]
         elif ch == curses.KEY_LEFT:
             sel = max(0, sel - 1)
         elif ch == curses.KEY_RIGHT:
-            sel = min(n - 1, sel + 1)
+            sel = min(n - 1, sel + 1) if n else 0
         elif ch == curses.KEY_UP:
-            if sel - ncols >= 0:
+            if n and sel - ncols >= 0:
                 sel -= ncols
         elif ch == curses.KEY_DOWN:
-            if sel + ncols < n:
+            if n and sel + ncols < n:
                 sel += ncols
         elif ch == ord("r"):
             sessions = get_sessions()
-        elif ch == ord("x"):
-            name = sessions[sel]["name"]
+        elif ch == ord("x") and n:
+            name = view[sel]["name"]
             if confirm(scr, f"kill session '{name}'?  y/N"):
                 sh(["tmux", "kill-session", "-t", f"={name}"])
                 sessions = get_sessions()
@@ -370,10 +444,10 @@ def run(scr):
             if hit is None:
                 continue
             if bstate & curses.BUTTON1_DOUBLE_CLICKED:
-                return sessions[hit]["name"]
+                return view[hit]["name"]
             if bstate & (curses.BUTTON1_CLICKED | curses.BUTTON1_PRESSED):
                 if hit == sel:
-                    return sessions[hit]["name"]
+                    return view[hit]["name"]
                 sel = hit
 
 

@@ -19,7 +19,7 @@ tells you what the project is actually up to:
  │  ▸ hypr · zsh                     │  │  ▸ scratch · python               │
  ╰───────────────────────────────╴3╶─╯  ╰───────────────────────────────╴4╶─╯
 
-        ←↑↓→ move   ↵ attach   1-9 jump   x kill   r refresh   q quit
+   ←↑↓→ move   ↵ attach   / search   1-9 jump   x kill   r refresh   q quit
 ```
 
 Each card shows:
@@ -51,6 +51,7 @@ tmux-deck
 | --- | --- |
 | `←↑↓→` / mouse | move between cards |
 | `Enter` / click selected / double-click | attach (uses `switch-client` inside tmux) |
+| `/` | search sessions by name — a centered box live-filters as you type; arrows move among matches, `Enter` attaches, `Esc` cancels |
 | `1`–`9` | jump straight into that session |
 | `x` | kill selected session (confirms) |
 | `r` | refresh |
