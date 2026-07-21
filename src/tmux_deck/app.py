@@ -39,6 +39,12 @@ def out(args):
     return sh(args).stdout
 
 
+def tmux_out(args):
+    # tmux >= 3.4 escapes control chars in format output as octal, so the
+    # \x1f separator arrives as the literal text "\037"
+    return out(args).replace("\\037", SEP)
+
+
 def short_when(s):
     """Compress git's '%cr' style dates: '2 hours ago' -> '2h ago'."""
     for long, short in (
@@ -112,10 +118,10 @@ def get_sessions():
         ]
     )
     sessions = []
-    for line in out(["tmux", "list-sessions", "-F", fmt]).splitlines():
+    for line in tmux_out(["tmux", "list-sessions", "-F", fmt]).splitlines():
         name, windows, attached, activity, group = line.split(SEP)
         target = f"={name}:"
-        winfo = out(
+        winfo = tmux_out(
             [
                 "tmux",
                 "display-message",
